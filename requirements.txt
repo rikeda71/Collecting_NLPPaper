@@ -1,0 +1,5 @@
+jupyterlab
+pandas
+pdfminer.six
+requests
+bs4
