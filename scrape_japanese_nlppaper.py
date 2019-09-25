@@ -44,6 +44,7 @@ SESSION_CLASS_PAIR = {
     '語彙': 'Resources and Evaluation',
     'コーパス': 'Resources and Evaluation',
     'アノテーション': 'Resources and Evaluation',
+    '言語資源・コーパス': 'Resources and Evaluation',
     '埋め込み表現': 'Word-level Semantics',
     '分散表現': 'Word-level Semantics',
     '言い換え': 'Word-level Semantics',
@@ -138,7 +139,7 @@ def extract_paper_details(trs: List[Any], page_url: str,
             span = pid.find('span') if pid is not None else None
             if pid is not None and \
                     span is not None and \
-                    re.search(r'[A-Z]\d+', span['id']) is not None:
+                    re.search(r'[A-Z]\d+', span.text) is not None:
                 paper_info = tr.find_all('td')
                 session = paper_info[0].text[:2]
                 title = re.sub(r'\(.+?\)', '', paper_info[1].text)
@@ -195,10 +196,10 @@ def extract_introduction(proceedings: List[Dict[str, Any]]):
 
     chaps = ['はじめに', '序論', '背景', '背景と目的', 'Introduction']
 
+    laparams = LAParams()
+    laparams.detect_vertical = True
+    manager = PDFResourceManager()
     for paper_dict in tqdm.tqdm(proceedings):
-        manager = PDFResourceManager()
-        laparams = LAParams()
-        laparams.detect_vertical = True
         paper_pdf = requests.get(paper_dict['url'])
         instr = BytesIO()
         instr.write(paper_pdf.content)
@@ -214,19 +215,23 @@ def extract_introduction(proceedings: List[Dict[str, Any]]):
                 first = outstr.getvalue()
                 intro = ''
                 for chap in chaps:
-                    cn = '1{}'.format(chap)
+                    cn = '1 {}'.format(chap)
                     if cn in first:
                         top = first.find(cn) + len(cn)
-                        if '．2' in first:
-                            intro = first[top: first.find('．2')]
-                        elif '.2' in first:
-                            intro = first[top: first.find('.2')]
-                        elif '。2' in first:
-                            intro = first[top: first.find('。2')]
+                        if '．\n\n2' in first:
+                            intro = first[top: first.find('．\n\n2')]
+                        elif '.\n\n2' in first:
+                            intro = first[top: first.find('.\n\n2')]
+                        elif '。\n\n2' in first:
+                            intro = first[top: first.find('。\n\n2')]
+                        else:
+                            intro = first[top:]
                         break
             except AttributeError:
                 logger.error('error: {}'.format(paper_dict['url']))
-        intro = first if intro == '' else intro
+
+        # intro = intro.replace('\r', '').encode('utf-8').decode()
+        intro = re.sub(r'\n+', '\n', intro)
         paper_dict['introduction'] = intro
         time.sleep(1.5 + random.random())
         instr.close()
@@ -242,14 +247,14 @@ def write_tsv(proceedings: List[Dict[str, Any]], year: int):
     """
 
     with open('data/nlp{}.tsv'.format(year), 'w') as f:
-        writer = csv.writer(f, delimiter='\t')
-        writer.writerows(['class', 'task', 'session', 'title',
-                          'authors', 'url', 'introduction'])
+        writer = csv.writer(f, delimiter='\t', lineterminator='\n')
+        writer.writerow(['class', 'task', 'session', 'title',
+                         'authors', 'url', 'introduction'])
         for paper in proceedings:
             # class: 分類先クラス, task: NLPでのタスク名,
             # session: 学会で割り振られたセッション title: 論文タイトル
             # authors: 著者らの名前, url: URL, introduction: イントロダクション
-            writer.writerows([
+            writer.writerow([
                 paper['class'],
                 paper['task'],
                 paper['session'],
