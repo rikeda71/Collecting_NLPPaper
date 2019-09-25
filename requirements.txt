@@ -1,5 +1,5 @@
 jupyterlab
-pandas
 pdfminer.six
 requests
 bs4
+tqdm
