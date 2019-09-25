@@ -18,11 +18,15 @@ from pdfminer.layout import LAParams
 from pdfminer.pdfpage import PDFPage
 
 
-logger = getLogger('scraper')
+logger = getLogger(__name__)
 logger.setLevel(logging.INFO)
 stream_handler = StreamHandler()
 stream_handler.setLevel(logging.INFO)
 logger.addHandler(stream_handler)
+
+filehandler = logging.FileHandler(filename='error.log')
+filehandler.setLevel(logging.WARN)
+logger.addHandler(filehandler)
 
 
 SESSION_CLASS_PAIR = {
@@ -190,33 +194,38 @@ def extract_introduction(proceedings: List[Dict[str, Any]]):
     """
 
     chaps = ['はじめに', '序論', '背景', '背景と目的', 'Introduction']
-    laparams = LAParams()
-    laparams.detect_vertical = True
+
     for paper_dict in tqdm.tqdm(proceedings):
         manager = PDFResourceManager()
+        laparams = LAParams()
+        laparams.detect_vertical = True
         paper_pdf = requests.get(paper_dict['url'])
         instr = BytesIO()
         instr.write(paper_pdf.content)
         outstr = StringIO()
-        with TextConverter(manager, outstr, codec='utf-8',
+        with TextConverter(manager, outstr,
                            laparams=laparams) as device:
             interpreter = PDFPageInterpreter(manager, device)
-            for page in PDFPage.get_pages(instr, set(), maxpages=1, caching=True,
-                                          check_extractable=True):
-                interpreter.process_page(page)
-            first = outstr.getvalue()
-            intro = ''
-            for chap in chaps:
-                cn = '1{}'.format(chap)
-                if cn in first:
-                    top = first.find(cn) + len(cn)
-                    if '．2' in first:
-                        intro = first[top: first.find('．2')]
-                    elif '.2' in first:
-                        intro = first[top: first.find('.2')]
-                    elif '。2' in first:
-                        intro = first[top: first.find('。2')]
-                    break
+            try:
+                for page in PDFPage.get_pages(instr, set(), maxpages=1,
+                                              caching=True,
+                                              check_extractable=True):
+                    interpreter.process_page(page)
+                first = outstr.getvalue()
+                intro = ''
+                for chap in chaps:
+                    cn = '1{}'.format(chap)
+                    if cn in first:
+                        top = first.find(cn) + len(cn)
+                        if '．2' in first:
+                            intro = first[top: first.find('．2')]
+                        elif '.2' in first:
+                            intro = first[top: first.find('.2')]
+                        elif '。2' in first:
+                            intro = first[top: first.find('。2')]
+                        break
+            except AttributeError:
+                logger.error('error: {}'.format(paper_dict['url']))
         intro = first if intro == '' else intro
         paper_dict['introduction'] = intro
         time.sleep(1.5 + random.random())
@@ -232,7 +241,7 @@ def write_tsv(proceedings: List[Dict[str, Any]], year: int):
         year (int): [description]
     """
 
-    with open('data/nlp{}.tsv', 'w') as f:
+    with open('data/nlp{}.tsv'.format(year), 'w') as f:
         writer = csv.writer(f, delimiter='\t')
         writer.writerows(['class', 'task', 'session', 'title',
                           'authors', 'url', 'introduction'])
