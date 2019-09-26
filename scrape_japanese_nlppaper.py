@@ -36,6 +36,7 @@ SESSION_CLASS_PAIR = {
     '情報抽出': 'Information Extraction',
     '固有表現解析': 'Information Extraction',
     '知識獲得・情報抽出': 'Information Extraction',
+    '情報検索': 'Information Retrieval',
     '検索': 'Information Retrieval',
     '推薦システム': 'Information Retrieval',
     '評判・感情解析': 'Sentiment Analysis',
@@ -170,7 +171,7 @@ def extract_paper_details(trs: List[Any], page_url: str,
                 author_str = author_regexp.sub('', tds[1].text)
                 author_str = head_regexp.sub('', author_str).replace(', ', ',')
                 authors = author_str.split(',')
-                proceedings_dict['url'] = page_url + link
+                proceedings_dict['url'] = page_url + link.replace('./', '')
                 proceedings_dict['authors'] = authors
                 proceedings.append(deepcopy(proceedings_dict))
             # 2014 ~ 2015
@@ -198,8 +199,8 @@ def extract_introduction(proceedings: List[Dict[str, Any]]):
 
     laparams = LAParams()
     laparams.detect_vertical = True
-    manager = PDFResourceManager()
     for paper_dict in tqdm.tqdm(proceedings):
+        manager = PDFResourceManager()
         paper_pdf = requests.get(paper_dict['url'])
         instr = BytesIO()
         instr.write(paper_pdf.content)
@@ -213,6 +214,7 @@ def extract_introduction(proceedings: List[Dict[str, Any]]):
                                               check_extractable=True):
                     interpreter.process_page(page)
                 first = outstr.getvalue()
+                print(first)
                 intro = ''
                 for chap in chaps:
                     cn = '1 {}'.format(chap)
@@ -227,8 +229,21 @@ def extract_introduction(proceedings: List[Dict[str, Any]]):
                         else:
                             intro = first[top:]
                         break
-            except AttributeError:
-                logger.error('error: {}'.format(paper_dict['url']))
+                    cn = '1{}'.format(chap)
+                    if cn in first:
+                        top = first.find(cn) + len(cn)
+                        if '．2' in first:
+                            intro = first[top: first.find('．2')]
+                        elif '.2' in first:
+                            intro = first[top: first.find('.2')]
+                        elif '。2' in first:
+                            intro = first[top: first.find('。2')]
+                        else:
+                            intro = first[top:]
+                        break
+            except Exception as e:
+                logger.error('error: {} url:{}'.format(e.args, paper_dict['url']))
+
 
         # intro = intro.replace('\r', '').encode('utf-8').decode()
         intro = re.sub(r'\n+', '\n', intro)
