@@ -16,4 +16,4 @@ services:
       MYSQL_ROOT_PASSWORD: P@ssw@rd
       TZ: "Asiz/Tokyo"
     ports:
-      - "3306:3306"
+      - "33036:3306"

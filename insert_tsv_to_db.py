@@ -70,7 +70,6 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str):
     files = glob.glob('{}{}*'.format(data_dir, file_str))
     prepare_table(file_str)
     for fpath in files:
-        print(fpath)
         year = int(fpath.replace('.tsv', '')[-4:])
         with open(fpath, 'r') as f:
             content = f.read()
@@ -98,7 +97,6 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str):
         data = [[row['class'], row['task'], row['session'],
                  row['title'], row['url'], row['introduction']]
                 for row in rows]
-        print(len(data))
         cursor.executemany(query, data)
         conn.commit()
 
@@ -111,7 +109,6 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str):
         for author, insert_data in zip(paper_authors, data):
             for name in author:
                 cursor.execute(query, [name, insert_data[3]])
-                print(insert_data)
 
 
 if __name__ == '__main__':
@@ -126,7 +123,7 @@ if __name__ == '__main__':
                            password='P@ssw@rd',
                            db='research_paper_db',
                            charset='utf8mb4',
-                           port=3306,
+                           port=33036,
                            cursorclass=pymysql.cursors.DictCursor
                            )
     insert_tsvdata(conn, args.data_dir, args.str_rule)
