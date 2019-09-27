@@ -1,0 +1,15 @@
+.vscode/
+env/
+.env/
+venv/
+.venv/
+.ipynb_checkpoints/*
+notebooks/.ipynb_checkpoints/
+__pycache__/
+data/*
+docker/mysql/data/*
+!.gitkeep
+*.log
+*.tsv
+*.txt
+*.csv
