@@ -3,3 +3,4 @@ pdfminer.six
 requests
 bs4
 tqdm
+PyMySQL
