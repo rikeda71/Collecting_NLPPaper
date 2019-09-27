@@ -43,7 +43,7 @@ python insert_tsv_to_db.py -d `data_dir` -s `conference name`
 
 
 ### About DB
-show [DB.md](https://github.com/s14t284/Collecting_NLPPaper/blob/master/DB.md)
+show [DB.md](https://github.com/s14t284/Collecting_NLPPaper/blob/master/DB.md) (in Japanese)
 
 
 ### About scripts
