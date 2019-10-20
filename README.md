@@ -73,5 +73,8 @@ optional arguments:
   -d DATA_DIR, --data_dir DATA_DIR
                         data directory. default data/
   -s STR_RULE, --str_rule STR_RULE
-                        file name. default `nlp``
+                        file name. default `nlp`
+  -l LANGUAGE, --language LANGUAGE
+                        language. use in insert language information. default
+                        `english`
 ```

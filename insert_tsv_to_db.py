@@ -39,12 +39,14 @@ def prepare_table(file_str: str):
         ('title', 'varchar(300) NOT NULL UNIQUE'),
         ('url', 'varchar(200) NOT NULL'),
         ('introduction', 'text'),
+        ('conference', 'varchar(10)'),
+        ('lang', 'varchar(20)'),
         ('PRIMARY KEY', '(id)')
     ])
-    if check_exist_and_create_table(conn, '{}_papers'.format(file_str),
+    if check_exist_and_create_table(conn, 'papers',
                                     column_datatypes):
         cursor = conn.cursor()
-        query = "CREATE TABLE {0}_paper_written_author(\
+        query = "CREATE TABLE paper_written_author(\
                 author_id int(5),\
                 paper_id int(4),\
                 PRIMARY KEY (author_id, paper_id),\
@@ -52,13 +54,13 @@ def prepare_table(file_str: str):
                     REFERENCES authors (id)\
                     ON DELETE RESTRICT ON UPDATE RESTRICT,\
                 FOREIGN KEY (paper_id)\
-                    REFERENCES {0}_papers (id)\
+                    REFERENCES papers (id)\
                     ON DELETE RESTRICT ON UPDATE RESTRICT\
             )".format(file_str)
         cursor.execute(query)
 
 
-def insert_tsvdata(conn: Connection, data_dir: str, file_str: str):
+def insert_tsvdata(conn: Connection, data_dir: str, file_str: str, lang: str):
     # check authors table exist
     check_exist_and_create_table(conn, 'authors',
                                  OrderedDict([
@@ -76,8 +78,8 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str):
             content = content.replace('\0', '')
             tsv = csv.DictReader(StringIO(content), delimiter='\t')
             rows = [row for row in tsv]
-        paper_authors = [[author for author
-                          in row['authors'].split(',')]
+        paper_authors = [[author.replace('\b', '').replace('♠', '')
+                          for author in row['authors'].split(',')]
                          for row in rows]
         # insert author names
         authors = list(set(
@@ -90,10 +92,12 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str):
         conn.commit()
 
         # insert paper informations
-        query = "INSERT IGNORE INTO {0}_papers\
+        query = "INSERT IGNORE INTO papers\
             (id, year, class, task,\
-            session, title, url, introduction) \
-            VALUES (0, {1}, %s, %s, %s, %s, %s, %s)".format(file_str, year)
+            session, title, url, introduction, conference, lang) \
+            VALUES (0, {0}, %s, %s, %s, %s, %s, %s, '{1}', '{2}')\
+            ".format(year, file_str, lang)
+        print(query)
         data = [[row['class'], row['task'], row['session'],
                  row['title'], row['url'], row['introduction']]
                 for row in rows]
@@ -101,11 +105,10 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str):
         conn.commit()
 
         # insert information of authors writing papers
-        query = "INSERT IGNORE INTO {0}_paper_written_author(author_id, paper_id)\
-            SELECT authors.id, {0}_papers.id\
-            from authors, {0}_papers\
-            where authors.name = %s and {0}_papers.title = %s\
-        ".format(file_str)
+        query = "INSERT IGNORE INTO paper_written_author(author_id, paper_id)\
+            SELECT authors.id, papers.id\
+            from authors, papers\
+            where authors.name = %s and papers.title = %s"
         for author, insert_data in zip(paper_authors, data):
             for name in author:
                 cursor.execute(query, [name, insert_data[3]])
@@ -117,6 +120,9 @@ if __name__ == '__main__':
                         help='data directory. default data/')
     parser.add_argument('-s', '--str_rule', default='nlp', type=str,
                         help='file name. default `nlp``')
+    parser.add_argument('-l', '--language', default='english', type=str,
+                        help='language. use in insert language information. \
+                        default `english`')
     args = parser.parse_args()
     conn = pymysql.connect(host='localhost',
                            user='root',
@@ -126,5 +132,5 @@ if __name__ == '__main__':
                            port=33036,
                            cursorclass=pymysql.cursors.DictCursor
                            )
-    insert_tsvdata(conn, args.data_dir, args.str_rule)
+    insert_tsvdata(conn, args.data_dir, args.str_rule, args.language)
     conn.close()

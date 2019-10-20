@@ -15,7 +15,7 @@
 | name | varchar(50) | NO | PRI | NULL | |
 
 
-- ()\_papers (()内は学会の略称が入る．言語処理学会ならnlp)
+- papers
     - 論文の情報を格納するテーブル
     - 言語処理学会については，introductionを保存しているが，Abstractが存在する学会に対してはそちらを使うことを検討
     - classはtaskの略称．classを機械学習によって推測したい
@@ -31,14 +31,16 @@
 | title | varchar(100) | NO | UNI | NULL | |
 | url | varchar(100) | NO | | NULL | |
 | introduction | varchar(100) | YES | | NULL | |
+| conference   | varchar(10)  | YES  | | NULL | |
+| lang         | varchar(20)  | YES  | | NULL | |
 
 
-- ()\_paper\_written\_author (()内は学会の略称が入る．)
+- paper\_written\_author
     - 論文と著者を結びつけるテーブル
     - 1つの論文に対して著者が複数いた場合，著者ごとにレコードを持つ．
         - 著者が3人なら，1つの論文につき，3つレコードを持つ
     - author\_idはauthorsのidを外部キーとしている
-    - paper\_idは()\_papersのidを外部キーとしている
+    - paper\_idはpapersのidを外部キーとしている
 
 
 | Field | Type | Null | Key | Default | Extra |
