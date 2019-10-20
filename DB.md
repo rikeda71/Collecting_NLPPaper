@@ -18,14 +18,14 @@
 - papers
     - 論文の情報を格納するテーブル
     - 言語処理学会については，introductionを保存しているが，Abstractが存在する学会に対してはそちらを使うことを検討
-    - classはtaskの略称．classを機械学習によって推測したい
+    - labelはtaskの略称．labelを機械学習によって推測したい
 
 
 | Field | Type | Null | Key | Default | Extra |
 ---- | ---- | ---- | ---- | ---- | ----
 | id | int(4) | NO | PRI | NULL | auto\_increment |
 | year | int(4) | NO | | NULL | |
-| class | varchar(20) | YES | | NULL | |
+| label | varchar(20) | YES | | NULL | |
 | task | varchar(50) | YES | | NULL | |
 | session | varchar(100) | YES | | NULL | |
 | title | varchar(100) | NO | UNI | NULL | |

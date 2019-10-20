@@ -4,6 +4,7 @@ import argparse
 import csv
 import glob
 from io import StringIO
+import re
 import pymysql.cursors
 from pymysql import Connection
 
@@ -33,7 +34,7 @@ def prepare_table(file_str: str):
     column_datatypes = OrderedDict([
         ('id', 'int(4) NOT NULL AUTO_INCREMENT'),
         ('year', 'int(4) NOT NULL'),
-        ('class', 'varchar(20)'),
+        ('label', 'varchar(20)'),
         ('task', 'varchar(50)'),
         ('session', 'varchar(100)'),
         ('title', 'varchar(300) NOT NULL UNIQUE'),
@@ -71,6 +72,7 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str, lang: str):
     data_dir = data_dir + '/' if data_dir[-1] != '/' else data_dir
     files = glob.glob('{}{}*'.format(data_dir, file_str))
     prepare_table(file_str)
+    author_rule = re.compile(r'(\(.+\))|♠')
     for fpath in files:
         year = int(fpath.replace('.tsv', '')[-4:])
         with open(fpath, 'r') as f:
@@ -78,9 +80,10 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str, lang: str):
             content = content.replace('\0', '')
             tsv = csv.DictReader(StringIO(content), delimiter='\t')
             rows = [row for row in tsv]
-        paper_authors = [[author.replace('\b', '').replace('♠', '')
+        paper_authors = [[author_rule.sub('', author).replace('\b', '')
                           for author in row['authors'].split(',')]
                          for row in rows]
+
         # insert author names
         authors = list(set(
             [author for paper_author in paper_authors
@@ -93,10 +96,10 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str, lang: str):
 
         # insert paper informations
         query = "INSERT IGNORE INTO papers\
-            (id, year, class, task,\
+            (id, year, label, task,\
             session, title, url, introduction, conference, lang) \
             VALUES (0, {0}, %s, %s, %s, %s, %s, %s, '{1}', '{2}')\
-            ".format(year, file_str, lang)
+            ".format(year, file_str.upper(), lang)
         print(query)
         data = [[row['class'], row['task'], row['session'],
                  row['title'], row['url'], row['introduction']]
@@ -119,7 +122,7 @@ if __name__ == '__main__':
     parser.add_argument('-d', '--data_dir', default='data/', type=str,
                         help='data directory. default data/')
     parser.add_argument('-s', '--str_rule', default='nlp', type=str,
-                        help='file name. default `nlp``')
+                        help='file name. default `NLP`')
     parser.add_argument('-l', '--language', default='english', type=str,
                         help='language. use in insert language information. \
                         default `english`')
