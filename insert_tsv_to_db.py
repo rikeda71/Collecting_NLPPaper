@@ -11,10 +11,11 @@ from pymysql import Connection
 
 def create_table(conn: Connection, table_name: str, column: Dict[str, str]):
     cursor = conn.cursor()
-    query = "CREATE TABLE {}({})".format(
+    query = "CREATE TABLE IF  NOT EXISTS {}({})".format(
         table_name,
         ', '.join([k + ' ' + v for k, v in column.items()])
     )
+    print(query)
     cursor.execute(query)
 
 
@@ -44,21 +45,20 @@ def prepare_table(file_str: str):
         ('lang', 'varchar(20)'),
         ('PRIMARY KEY', '(id)')
     ])
-    if check_exist_and_create_table(conn, 'papers',
-                                    column_datatypes):
-        cursor = conn.cursor()
-        query = "CREATE TABLE paper_written_author(\
-                author_id int(5),\
-                paper_id int(4),\
-                PRIMARY KEY (author_id, paper_id),\
-                FOREIGN KEY (author_id)\
-                    REFERENCES authors (id)\
-                    ON DELETE RESTRICT ON UPDATE RESTRICT,\
-                FOREIGN KEY (paper_id)\
-                    REFERENCES papers (id)\
-                    ON DELETE RESTRICT ON UPDATE RESTRICT\
-            )".format(file_str)
-        cursor.execute(query)
+    check_exist_and_create_table(conn, 'papers', column_datatypes)
+    cursor = conn.cursor()
+    query = "CREATE TABLE IF NOT EXISTS paper_written_author(\
+            author_id int(5),\
+            paper_id int(4),\
+            PRIMARY KEY (author_id, paper_id),\
+            FOREIGN KEY (author_id)\
+                REFERENCES authors (id)\
+                ON DELETE CASCADE ON UPDATE CASCADE,\
+            FOREIGN KEY (paper_id)\
+                REFERENCES papers (id)\
+                ON DELETE CASCADE ON UPDATE CASCADE\
+        )".format(file_str)
+    cursor.execute(query)
 
 
 def insert_tsvdata(conn: Connection, data_dir: str, file_str: str, lang: str):
@@ -100,7 +100,6 @@ def insert_tsvdata(conn: Connection, data_dir: str, file_str: str, lang: str):
             session, title, url, introduction, conference, lang) \
             VALUES (0, {0}, %s, %s, %s, %s, %s, %s, '{1}', '{2}')\
             ".format(year, file_str.upper(), lang)
-        print(query)
         data = [[row['class'], row['task'], row['session'],
                  row['title'], row['url'], row['introduction']]
                 for row in rows]
